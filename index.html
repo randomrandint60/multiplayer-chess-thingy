@@ -2988,8 +2988,22 @@
     const socketUrl = cloudBackendUrl || (window.location.hostname ? (window.location.protocol + '//' + window.location.hostname + ':9000') : 'http://localhost:9000');
     console.log('[Socket.io] Connecting to:', socketUrl);
     
-    window.socket = io(socketUrl, { autoConnect: false });
-    window.challengeSocket = io(socketUrl + '/chess-challenges', { autoConnect: false });
+    if (typeof io === 'undefined') {
+        console.warn('[Socket.io] Client library not loaded! Real-time multiplayer features will be disabled.');
+        const mockSocket = {
+            on: () => {},
+            emit: () => {},
+            connect: () => {},
+            disconnect: () => {},
+            connected: false,
+            id: null
+        };
+        window.socket = mockSocket;
+        window.challengeSocket = mockSocket;
+    } else {
+        window.socket = io(socketUrl, { autoConnect: false });
+        window.challengeSocket = io(socketUrl + '/chess-challenges', { autoConnect: false });
+    }
     window.currentChatRoom = null;
     window.currentChatMessages = [];
 
@@ -9558,129 +9572,169 @@
             console.error("XP Reset Migration failed:", e);
         }
         
-        mpSyncLeaderboard();
+        try { mpSyncLeaderboard(); } catch(e) { console.error("mpSyncLeaderboard error:", e); }
 
         if (typeof Sortable !== 'undefined') {
-            sortableLeft = new Sortable(document.getElementById('left-sidebar'), {
-                group: 'widgets',
-                animation: 150,
-                handle: '.widget',
-                filter: '.edit-toggle',
-                draggable: '.widget',
-                disabled: true,
-                onEnd: saveWidgetLayout
-            });
-            sortableRight = new Sortable(document.getElementById('right-sidebar'), {
-                group: 'widgets',
-                animation: 150,
-                handle: '.widget',
-                filter: '.edit-toggle',
-                draggable: '.widget',
-                disabled: true,
-                onEnd: saveWidgetLayout
-            });
+            try {
+                sortableLeft = new Sortable(document.getElementById('left-sidebar'), {
+                    group: 'widgets',
+                    animation: 150,
+                    handle: '.widget',
+                    filter: '.edit-toggle',
+                    draggable: '.widget',
+                    disabled: true,
+                    onEnd: saveWidgetLayout
+                });
+                sortableRight = new Sortable(document.getElementById('right-sidebar'), {
+                    group: 'widgets',
+                    animation: 150,
+                    handle: '.widget',
+                    filter: '.edit-toggle',
+                    draggable: '.widget',
+                    disabled: true,
+                    onEnd: saveWidgetLayout
+                });
+            } catch(e) {
+                console.error("Sortable error:", e);
+            }
         }
 
-        addXP(0);
-        rndGpa();
-        c4Init();
-        bjInit();
-        initKbCapture();
+        try { addXP(0); } catch(e) { console.error("addXP error:", e); }
+        try { rndGpa(); } catch(e) { console.error("rndGpa error:", e); }
+        try { c4Init(); } catch(e) { console.error("c4Init error:", e); }
+        try { bjInit(); } catch(e) { console.error("bjInit error:", e); }
+        try { initKbCapture(); } catch(e) { console.error("initKbCapture error:", e); }
 
         // Unlock hacker theme if WPM badge earned
-        if (unlockedBadges.includes('b-wpm')) {
-            let optHack = document.getElementById('opt-hacker');
-            if (optHack) { optHack.disabled = false; optHack.innerText = '💻 Matrix Hacker'; }
-            let optHackTop = document.getElementById('opt-hacker-top');
-            if (optHackTop) { optHackTop.disabled = false; optHackTop.innerText = '💻 Matrix Hacker'; }
+        try {
+            if (unlockedBadges.includes('b-wpm')) {
+                let optHack = document.getElementById('opt-hacker');
+                if (optHack) { optHack.disabled = false; optHack.innerText = '💻 Matrix Hacker'; }
+                let optHackTop = document.getElementById('opt-hacker-top');
+                if (optHackTop) { optHackTop.disabled = false; optHackTop.innerText = '💻 Matrix Hacker'; }
+            }
+        } catch(e) {
+            console.error("Hacker theme unlock error:", e);
         }
 
         // Apply theme + profile + font
-        let th = localStorage.getItem('th') || 'theme-space';
-        let prof = localStorage.getItem('profile') || 'prof-normal';
-        let font = localStorage.getItem('font') || 'font-inter';
-        setProfile(prof);
-        
-        let thSel = document.getElementById('th-sel');
-        if (thSel) thSel.value = th;
-        let topThSel = document.getElementById('theme-select');
-        if (topThSel) topThSel.value = th;
-        
-        let laySel = document.getElementById('layout-select');
-        if (laySel) laySel.value = prof;
-        
-        let fontSel = document.getElementById('font-sel');
-        if (fontSel) fontSel.value = font;
+        try {
+            let th = localStorage.getItem('th') || 'theme-space';
+            let prof = localStorage.getItem('profile') || 'prof-normal';
+            let font = localStorage.getItem('font') || 'font-inter';
+            setProfile(prof);
+            
+            let thSel = document.getElementById('th-sel');
+            if (thSel) thSel.value = th;
+            let topThSel = document.getElementById('theme-select');
+            if (topThSel) topThSel.value = th;
+            
+            let laySel = document.getElementById('layout-select');
+            if (laySel) laySel.value = prof;
+            
+            let fontSel = document.getElementById('font-sel');
+            if (fontSel) fontSel.value = font;
+        } catch(e) {
+            console.error("Theme/Profile/Font apply error:", e);
+        }
 
-        let nm = localStorage.getItem('nm') || 'Scholar';
-        let snm = document.getElementById('set-name');
-        if (snm) snm.value = nm;
-        setGreeting();
+        try {
+            let nm = localStorage.getItem('nm') || 'Scholar';
+            let snm = document.getElementById('set-name');
+            if (snm) snm.value = nm;
+            setGreeting();
+        } catch(e) {
+            console.error("Name/Greeting error:", e);
+        }
 
         // Load particles settings
-        let partEnabled = localStorage.getItem('particles-enabled') === 'true';
-        let partCB = document.getElementById('set-particles-enable');
-        if (partCB) partCB.checked = partEnabled;
-        particlesEnabled = partEnabled;
-        initParticles();
-        let canvas = document.getElementById('particle-canvas');
-        if (canvas) canvas.style.display = partEnabled ? 'block' : 'none';
-        if (partEnabled) startParticles();
+        try {
+            let partEnabled = localStorage.getItem('particles-enabled') === 'true';
+            let partCB = document.getElementById('set-particles-enable');
+            if (partCB) partCB.checked = partEnabled;
+            particlesEnabled = partEnabled;
+            initParticles();
+            let canvas = document.getElementById('particle-canvas');
+            if (canvas) canvas.style.display = partEnabled ? 'block' : 'none';
+            if (partEnabled) startParticles();
+        } catch(e) {
+            console.error("Particles init error:", e);
+        }
 
         // Load keyclick sound settings
-        let keyEnabled = localStorage.getItem('keysound-enabled') === 'true';
-        let keyCB = document.getElementById('set-keysound-enable');
-        if (keyCB) keyCB.checked = keyEnabled;
-        keySoundEnabled = keyEnabled;
+        try {
+            let keyEnabled = localStorage.getItem('keysound-enabled') === 'true';
+            let keyCB = document.getElementById('set-keysound-enable');
+            if (keyCB) keyCB.checked = keyEnabled;
+            keySoundEnabled = keyEnabled;
+        } catch(e) {
+            console.error("Keysound load error:", e);
+        }
 
         // Load DIY custom colors builder settings
-        let diyEnabled = localStorage.getItem('diy-enabled') === 'true';
-        let diyCB = document.getElementById('set-diy-enable');
-        if (diyCB) diyCB.checked = diyEnabled;
-        
-        if (document.getElementById('set-diy-accent')) document.getElementById('set-diy-accent').value = localStorage.getItem('diy-accent') || '#667eea';
-        if (document.getElementById('set-diy-glass-color')) document.getElementById('set-diy-glass-color').value = localStorage.getItem('diy-glass-color') || '#ffffff';
-        if (document.getElementById('set-diy-glass-opacity')) {
-            let val = localStorage.getItem('diy-glass-opacity') || '0.85';
-            document.getElementById('set-diy-glass-opacity').value = val;
-            document.getElementById('val-diy-opacity').innerText = val;
+        try {
+            let diyEnabled = localStorage.getItem('diy-enabled') === 'true';
+            let diyCB = document.getElementById('set-diy-enable');
+            if (diyCB) diyCB.checked = diyEnabled;
+            
+            if (document.getElementById('set-diy-accent')) document.getElementById('set-diy-accent').value = localStorage.getItem('diy-accent') || '#667eea';
+            if (document.getElementById('set-diy-glass-color')) document.getElementById('set-diy-glass-color').value = localStorage.getItem('diy-glass-color') || '#ffffff';
+            if (document.getElementById('set-diy-glass-opacity')) {
+                let val = localStorage.getItem('diy-glass-opacity') || '0.85';
+                document.getElementById('set-diy-glass-opacity').value = val;
+                document.getElementById('val-diy-opacity').innerText = val;
+            }
+            if (document.getElementById('set-diy-blur')) {
+                let val = localStorage.getItem('diy-blur') || '16';
+                document.getElementById('set-diy-blur').value = val;
+                document.getElementById('val-diy-blur').innerText = val + 'px';
+            }
+            toggleDiyFields();
+            applyDIYTheme();
+        } catch(e) {
+            console.error("DIY custom theme load error:", e);
         }
-        if (document.getElementById('set-diy-blur')) {
-            let val = localStorage.getItem('diy-blur') || '16';
-            document.getElementById('set-diy-blur').value = val;
-            document.getElementById('val-diy-blur').innerText = val + 'px';
-        }
-        toggleDiyFields();
-        applyDIYTheme();
 
         // Load cow mode
-        applyCowMode();
+        try { applyCowMode(); } catch(e) { console.error("applyCowMode error:", e); }
 
         // Restore Gemini Key
-        let gemKey = localStorage.getItem('gemini-api-key') || '';
-        let sGemKey = document.getElementById('set-gemini-key');
-        if (sGemKey) sGemKey.value = gemKey;
+        try {
+            let gemKey = localStorage.getItem('gemini-api-key') || '';
+            let sGemKey = document.getElementById('set-gemini-key');
+            if (sGemKey) sGemKey.value = gemKey;
+        } catch(e) {
+            console.error("Gemini key restore error:", e);
+        }
 
         // Restore deadline settings
-        let cdName = localStorage.getItem('cd-name') || '';
-        let cdDate = localStorage.getItem('cd-date') || '';
-        let setCD = document.getElementById('set-cd-name');
-        let setDate = document.getElementById('set-cd-date');
-        if (setCD) setCD.value = cdName;
-        if (setDate) setDate.value = cdDate;
-        let cdTitleDisp = document.getElementById('cd-title-disp');
-        if (cdTitleDisp && cdName) cdTitleDisp.innerText = cdName;
+        try {
+            let cdName = localStorage.getItem('cd-name') || '';
+            let cdDate = localStorage.getItem('cd-date') || '';
+            let setCD = document.getElementById('set-cd-name');
+            let setDate = document.getElementById('set-cd-date');
+            if (setCD) setCD.value = cdName;
+            if (setDate) setDate.value = cdDate;
+            let cdTitleDisp = document.getElementById('cd-title-disp');
+            if (cdTitleDisp && cdName) cdTitleDisp.innerText = cdName;
+        } catch(e) {
+            console.error("Deadline restore error:", e);
+        }
 
         // Widget layout
-        let defaultWidgets = {
-            "w-typing": true, "w-connect4": true, "w-calc": true,
-            "w-flashcards": true, "w-timer": true, "w-todo": true,
-            "w-blackjack": true, "w-leaderboard": true,
-            "w-quests": true, "w-chat": true, "w-poker": true
-        };
-        let ws = safeJSONParse('widgets', defaultWidgets);
-        syncWidgetCheckboxes(ws);
-        rebuildWidgetLayout();
+        try {
+            let defaultWidgets = {
+                "w-typing": true, "w-connect4": true, "w-calc": true,
+                "w-flashcards": true, "w-timer": true, "w-todo": true,
+                "w-blackjack": true, "w-leaderboard": true,
+                "w-quests": true, "w-chat": true, "w-poker": true
+            };
+            let ws = safeJSONParse('widgets', defaultWidgets);
+            syncWidgetCheckboxes(ws);
+            rebuildWidgetLayout();
+        } catch(e) {
+            console.error("Widget layout error:", e);
+        }
 
         try { initTyping(); } catch(e) { console.error("initTyping error:", e); }
         try { pokerResetGame(); } catch(e) { console.error("pokerResetGame error:", e); }
@@ -9694,75 +9748,90 @@
         try { chessInit(); } catch(e) { console.error("chessInit error:", e); }
 
         // Restore period name inputs
-        let savedPN = safeJSONParse('pnames', {});
-        for(let i=1;i<=7;i++) { let el=document.getElementById('pn-'+i); if(el && savedPN[i]) el.value = savedPN[i]; }
-
-        // Restore scratchpad
-        let scratch = document.getElementById('scratch');
-        if (scratch) scratch.value = localStorage.getItem('scratch') || '';
-
-        // Show flashcard if exists
-        // Show flashcard count and initialize
-        updateFCCount();
-
-        // Quick Links
-        let qLinks = safeJSONParse('q-links', [
-            {n:'Class', u:'https://classroom.google.com'},
-            {n:'Drive', u:'https://drive.google.com'},
-            {n:'Mail', u:'https://gmail.com'},
-            {n:'Docs', u:'https://docs.google.com'}
-        ]);
-        [1,2,3,4].forEach(i => {
-            let n = document.getElementById(`l-n-${i}`), u = document.getElementById(`l-u-${i}`);
-            if (n && qLinks[i-1]) { n.value = qLinks[i-1].n; u.value = qLinks[i-1].u; }
-        });
-        let linkHtml = qLinks.filter(l=>l.n&&l.u).map(l => {
-            let url = l.u.startsWith('http') ? l.u : 'https://' + l.u;
-            return `<a href="${url}" target="_blank" class="btn" style="text-decoration:none; font-size:0.85em; text-align:center;">🔗 ${l.n}</a>`;
-        }).join('');
-        let lc = document.getElementById('link-container');
-        if (lc) lc.innerHTML = linkHtml;
-
-        // Schedule
-        let now = new Date();
-        let dStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-        let evs = schoolEvents[dStr] || [];
-        holName = evs.find(e => e.includes("Holiday") || e.includes("Last Day")) || null;
-        isHol = holName !== null;
-        if (evs.length > 0) {
-            let b = document.getElementById('event-banner');
-            if (b) { b.style.display = 'block'; b.innerText = '📅 Today: ' + evs.join(' | '); }
+        try {
+            let savedPN = safeJSONParse('pnames', {});
+            for(let i=1;i<=7;i++) { let el=document.getElementById('pn-'+i); if(el && savedPN[i]) el.value = savedPN[i]; }
+        } catch(e) {
+            console.error("Period names restore error:", e);
         }
 
-        let savedSched = localStorage.getItem('man-sched') || 'auto';
-        let sel = document.getElementById('day-sel');
-        if (sel) {
-            sel.value = savedSched;
-            sel.onchange = () => {
-                let v = sel.value;
-                localStorage.setItem('man-sched', v);
-                if (isHol) { aSched = []; }
-                else if (v === 'auto') {
-                    let d = now.getDay();
-                    aSched = S[["Sun","Monday","Tuesday","Wednesday","Thursday","Friday","Sat"][d]] || [];
-                } else { aSched = S[v] || []; }
-                let l = document.getElementById('sched-ls');
-                if (l) {
-                    l.innerHTML = '';
-                    if (!aSched.length) {
-                        l.innerHTML = `<li><span style="font-weight:800;color:#2b6cb0;">${isHol ? '🎉 Happy ' + holName + '!' : 'Enjoy your time off!'}</span></li>`;
-                    } else {
-                        aSched.forEach((i, x) => l.innerHTML += `<li id="r-${x}"><span>${getName(i.p)}</span><span>${i.s} - ${i.e}</span></li>`);
+        // Restore scratchpad
+        try {
+            let scratch = document.getElementById('scratch');
+            if (scratch) scratch.value = localStorage.getItem('scratch') || '';
+        } catch(e) {
+            console.error("Scratchpad restore error:", e);
+        }
+
+        // Show flashcard if exists
+        try { updateFCCount(); } catch(e) { console.error("updateFCCount error:", e); }
+
+        // Quick Links
+        try {
+            let qLinks = safeJSONParse('q-links', [
+                {n:'Class', u:'https://classroom.google.com'},
+                {n:'Drive', u:'https://drive.google.com'},
+                {n:'Mail', u:'https://gmail.com'},
+                {n:'Docs', u:'https://docs.google.com'}
+            ]);
+            [1,2,3,4].forEach(i => {
+                let n = document.getElementById(`l-n-${i}`), u = document.getElementById(`l-u-${i}`);
+                if (n && qLinks[i-1]) { n.value = qLinks[i-1].n; u.value = qLinks[i-1].u; }
+            });
+            let linkHtml = qLinks.filter(l=>l.n&&l.u).map(l => {
+                let url = l.u.startsWith('http') ? l.u : 'https://' + l.u;
+                return `<a href="${url}" target="_blank" class="btn" style="text-decoration:none; font-size:0.85em; text-align:center;">🔗 ${l.n}</a>`;
+            }).join('');
+            let lc = document.getElementById('link-container');
+            if (lc) lc.innerHTML = linkHtml;
+        } catch(e) {
+            console.error("Quick links error:", e);
+        }
+
+        // Schedule
+        try {
+            let now = new Date();
+            let dStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            let evs = schoolEvents[dStr] || [];
+            holName = evs.find(e => e.includes("Holiday") || e.includes("Last Day")) || null;
+            isHol = holName !== null;
+            if (evs.length > 0) {
+                let b = document.getElementById('event-banner');
+                if (b) { b.style.display = 'block'; b.innerText = '📅 Today: ' + evs.join(' | '); }
+            }
+
+            let savedSched = localStorage.getItem('man-sched') || 'auto';
+            let sel = document.getElementById('day-sel');
+            if (sel) {
+                sel.value = savedSched;
+                sel.onchange = () => {
+                    let v = sel.value;
+                    localStorage.setItem('man-sched', v);
+                    if (isHol) { aSched = []; }
+                    else if (v === 'auto') {
+                        let d = now.getDay();
+                        aSched = S[["Sun","Monday","Tuesday","Wednesday","Thursday","Friday","Sat"][d]] || [];
+                    } else { aSched = S[v] || []; }
+                    let l = document.getElementById('sched-ls');
+                    if (l) {
+                        l.innerHTML = '';
+                        if (!aSched.length) {
+                            l.innerHTML = `<li><span style="font-weight:800;color:#2b6cb0;">${isHol ? '🎉 Happy ' + holName + '!' : 'Enjoy your time off!'}</span></li>`;
+                        } else {
+                            aSched.forEach((i, x) => l.innerHTML += `<li id="r-${x}"><span>${getName(i.p)}</span><span>${i.s} - ${i.e}</span></li>`);
+                        }
                     }
-                }
-                upd();
-            };
-            sel.dispatchEvent(new Event('change'));
+                    upd();
+                };
+                sel.dispatchEvent(new Event('change'));
+            }
+        } catch(e) {
+            console.error("Schedule error:", e);
         }
 
         // First-visit badge
-        checkBadges();
-        initDailyQuests();
+        try { checkBadges(); } catch(e) { console.error("checkBadges error:", e); }
+        try { initDailyQuests(); } catch(e) { console.error("initDailyQuests error:", e); }
         setInterval(upd, 1000);
         setInterval(pollChat, 3000);
         syncOnlineGroups();
