@@ -5199,27 +5199,15 @@
         } catch(e) {}
         
         if (tab === 'dms') {
-            let optionsHtml = '';
-            if (users.length === 0) {
-                optionsHtml = '<p style="color:#718096; font-size:0.9em; padding:10px; text-align:center;">No other users found.</p>';
-            } else {
-                users.forEach(u => {
-                    optionsHtml += `
-                        <div class="user-select-item" style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; cursor:pointer; margin-bottom:5px; transition:0.2s;" onclick="selectDMUser('${u}')" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(u)}&background=random&color=fff" style="width:28px; height:28px; border-radius:50%;" />
-                            <span style="font-weight:600; color:#fff;">${u}</span>
-                        </div>
-                    `;
-                });
-            }
-            
             m.innerHTML = `
                 <div style="background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; width: 340px; color: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.4); text-align: left; position: relative;">
                     <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:#a0aec0; font-size:1.2em; cursor:pointer;" onclick="document.body.removeChild(document.getElementById('new-chat-modal'))">✖</button>
                     <h3 style="margin-top:0; color:#00f2ff; font-weight:800; font-size:1.2em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:15px;">💬 Start a Direct Message</h3>
-                    <div style="max-height: 250px; overflow-y: auto; padding-right: 5px;">
-                        ${optionsHtml}
+                    <div style="margin-bottom: 15px; display: flex; gap: 8px;">
+                        <input type="text" id="dm-search-username" placeholder="Enter username..." style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.9em; outline: none; box-sizing: border-box;" onkeydown="if(event.key === 'Enter') performDMSearch()" />
+                        <button onclick="performDMSearch()" style="padding: 8px 15px; border: none; border-radius: 6px; background: var(--accent, #667eea); color: #fff; font-weight: bold; font-size: 0.9em; cursor: pointer; transition: background 0.2s;">Search</button>
                     </div>
+                    <div id="dm-search-error" style="color: #ff4a4a; font-size: 0.85em; margin-top: 5px; display: none; font-weight: 600;">Username not found. Please check the spelling.</div>
                 </div>
             `;
         } else {
@@ -5265,6 +5253,87 @@
         let m = document.getElementById('new-chat-modal');
         if (m) document.body.removeChild(m);
         openDM(user);
+    };
+
+    window.performDMSearch = async function() {
+        let inputEl = document.getElementById('dm-search-username');
+        let errorEl = document.getElementById('dm-search-error');
+        if (!inputEl) return;
+        
+        let target = inputEl.value.trim();
+        if (!target) return;
+        
+        if (errorEl) errorEl.style.display = 'none';
+        
+        let currentUser = localStorage.getItem('current-user') || 'Guest';
+        if (target.toLowerCase() === currentUser.toLowerCase()) {
+            if (errorEl) {
+                errorEl.innerText = "You cannot start a chat with yourself!";
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // 1. Check local users-db
+        let db = JSON.parse(localStorage.getItem('users-db') || '{}');
+        let matchedUser = Object.keys(db).find(u => u.toLowerCase() === target.toLowerCase());
+        
+        if (matchedUser) {
+            selectDMUser(matchedUser);
+            return;
+        }
+        
+        // 2. Try PocketBase
+        if (pb) {
+            try {
+                let records = await pb.collection('users').getList(1, 1, {
+                    filter: `username = "${target}"`
+                });
+                if (records.items.length > 0) {
+                    let pbUser = records.items[0].username;
+                    // Add to local db
+                    db[pbUser] = {
+                        username: pbUser,
+                        xp: records.items[0].xp || 0,
+                        settings: {}
+                    };
+                    originalSetItem.call(localStorage, 'users-db', JSON.stringify(db));
+                    selectDMUser(pbUser);
+                    return;
+                }
+            } catch(e) {
+                console.error("PocketBase user search error:", e);
+            }
+        }
+        
+        // 3. Try Leaderboard from KVDB
+        try {
+            let res = await fetch(`https://kvdb.io/NN6YMMtx7CnpmmFuKzmUiY/leaderboard`);
+            if (res.ok) {
+                let onlineUsers = await res.json();
+                let kvdbMatch = onlineUsers.find(u => u.username.toLowerCase() === target.toLowerCase());
+                if (kvdbMatch) {
+                    let kvdbUser = kvdbMatch.username;
+                    // Add to local db
+                    db[kvdbUser] = {
+                        username: kvdbUser,
+                        xp: kvdbMatch.xp || 0,
+                        settings: {}
+                    };
+                    originalSetItem.call(localStorage, 'users-db', JSON.stringify(db));
+                    selectDMUser(kvdbUser);
+                    return;
+                }
+            }
+        } catch(e) {
+            console.error("KVDB user search error:", e);
+        }
+        
+        // User not found
+        if (errorEl) {
+            errorEl.innerText = 'Username not found. Please check the spelling.';
+            errorEl.style.display = 'block';
+        }
     };
     
     window.submitGroupChatForm = function() {
