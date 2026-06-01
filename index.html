@@ -2988,6 +2988,19 @@
     const socketUrl = cloudBackendUrl || (window.location.hostname ? (window.location.protocol + '//' + window.location.hostname + ':9000') : 'http://localhost:9000');
     console.log('[Socket.io] Connecting to:', socketUrl);
     
+    // PeerJS client connection config pointing to our Render server (or localhost fallback)
+    window.peerConfig = cloudBackendUrl ? {
+        host: 'multiplayer-chess-thingy.onrender.com',
+        port: 443,
+        path: '/',
+        secure: true
+    } : {
+        host: window.location.hostname || 'localhost',
+        port: 9000,
+        path: '/',
+        secure: false
+    };
+    
     if (typeof io === 'undefined') {
         console.warn('[Socket.io] Client library not loaded! Real-time multiplayer features will be disabled.');
         const mockSocket = {
@@ -7456,7 +7469,7 @@
             if (typeof Peer !== 'undefined') {
                 try {
                     if (window.mpPeer) { window.mpPeer.destroy(); window.mpPeer = null; }
-                    window.mpPeer = new Peer('MSOS_' + gameType + '_' + window.mpRoom);
+                    window.mpPeer = new Peer('MSOS_' + gameType + '_' + window.mpRoom, window.peerConfig);
                     window.mpPeer.on('connection', (conn) => {
                         window.mpConn = conn;
                         setupPeerConnection(gameType);
@@ -7552,7 +7565,7 @@
             if (typeof Peer !== 'undefined') {
                 try {
                     if (window.mpPeer) { window.mpPeer.destroy(); window.mpPeer = null; }
-                    window.mpPeer = new Peer();
+                    window.mpPeer = new Peer(window.peerConfig);
                     window.mpPeer.on('open', () => {
                         let conn = window.mpPeer.connect('MSOS_' + gameType + '_' + window.mpRoom);
                         window.mpConn = conn;
@@ -7698,7 +7711,7 @@
                     if (typeof Peer !== 'undefined') {
                         try {
                             if (window.mpPeer) { window.mpPeer.destroy(); window.mpPeer = null; }
-                            window.mpPeer = new Peer();
+                            window.mpPeer = new Peer(window.peerConfig);
                             window.mpPeer.on('open', () => {
                                 let conn = window.mpPeer.connect('MSOS_' + gameType + '_' + window.mpRoom);
                                 window.mpConn = conn;
