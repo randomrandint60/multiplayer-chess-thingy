@@ -1,0 +1,22 @@
+{
+  "name": "Egan Smartwatch Dashboard",
+  "short_name": "EganWatch",
+  "description": "Wear OS optimized Chess, Poker, and Chat client dashboard for circular smartwatch displays.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1a202c",
+  "theme_color": "#3182ce",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
